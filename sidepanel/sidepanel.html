@@ -1,0 +1,276 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Hotmail Register Luckmail V2</title>
+    <link rel="stylesheet" href="./sidepanel.css">
+  </head>
+  <body>
+    <main class="panel-shell">
+      <header class="app-header">
+        <div class="header-top">
+          <div class="app-brand">
+            <p class="app-eyebrow">Hotmail Register Luckmail V2</p>
+            <h1>自动流程控制台</h1>
+          </div>
+          <button id="save-settings" class="btn btn-secondary btn-sm" type="button">保存设置</button>
+        </div>
+
+        <div class="header-actions">
+          <div class="header-row header-row-bottom">
+            <label class="mini-input mini-input-run">
+              <span>轮数</span>
+              <input id="run-count" type="number" min="1">
+            </label>
+            <button id="auto-run-current" class="btn btn-primary btn-sm" type="button">自动运行</button>
+            <button id="restart-current-run" class="btn btn-secondary btn-sm" type="button">继续</button>
+            <button id="restart-next-account" class="btn btn-secondary btn-sm" type="button">下一个账号</button>
+          </div>
+        </div>
+      </header>
+
+      <input id="oauth-url" type="hidden">
+
+      <section class="card">
+        <div class="section-heading">
+          <h2>常用配置</h2>
+          <span id="save-hint" class="save-hint">已保存</span>
+        </div>
+
+        <div class="data-card">
+          <label class="data-row">
+            <span class="data-label">API Key</span>
+            <span class="secret-field">
+              <input id="api-key" class="data-input mono has-eye" type="password" placeholder="邮件平台 API Key">
+              <button id="toggle-api-key" class="eye-btn" type="button" title="显示 API Key" aria-label="显示 API Key">◉</button>
+            </span>
+          </label>
+
+          <label class="data-row">
+            <span class="data-label">API URL</span>
+            <input id="mail-api-base-url" class="data-input mono" type="text" placeholder="例如 http://localhost:5000">
+          </label>
+
+          <label class="data-row">
+            <span class="data-label">CPA URL</span>
+            <input id="vps-url" class="data-input mono" type="text" placeholder="http://ip:port/management.html#/oauth">
+          </label>
+
+          <label class="data-row">
+            <span class="data-label">管理密钥</span>
+            <span class="secret-field">
+              <input id="vps-password" class="data-input mono has-eye" type="password" placeholder="CPA 管理密钥">
+              <button id="toggle-vps-password" class="eye-btn" type="button" title="显示管理密钥" aria-label="显示管理密钥">◉</button>
+            </span>
+          </label>
+
+          <label class="data-row">
+            <span class="data-label">默认登录密码</span>
+            <span class="secret-field">
+              <input id="default-login-password" class="data-input mono has-eye" type="password" placeholder="OpenAI 登录默认密码">
+              <button id="toggle-default-login-password" class="eye-btn" type="button" title="显示默认登录密码" aria-label="显示默认登录密码">◉</button>
+            </span>
+          </label>
+
+          <label class="data-row">
+            <span class="data-label">短信验证</span>
+            <span>
+              <input id="enable-sms-verification" type="checkbox">
+              <span>开启短信验证</span>
+            </span>
+          </label>
+        </div>
+
+        <div class="settings-grid settings-grid-pair">
+          <label class="compact-field">
+            <span>轮询间隔(秒)</span>
+            <input id="poll-interval" type="number" min="1">
+          </label>
+
+          <label class="compact-field">
+            <span>轮询超时(秒)</span>
+            <input id="poll-timeout" type="number" min="5">
+          </label>
+        </div>
+
+      </section>
+
+      <details class="card picker-card">
+        <summary class="picker-summary">
+          <span class="picker-summary-main">
+            <span class="picker-summary-title">指定邮箱</span>
+            <span class="picker-summary-caption">可选项，不指定时默认使用第一个可用邮箱</span>
+          </span>
+          <span class="summary-tip">展开后搜索并指定已有邮箱</span>
+        </summary>
+
+        <div class="picker-body">
+          <div class="picker-toolbar">
+            <input id="account-search" class="data-input mono" type="text" placeholder="可直接看列表，也可输入关键字筛选已有邮箱">
+            <button id="clear-selected-account" class="btn btn-ghost btn-xs" type="button">清除指定</button>
+          </div>
+
+          <div id="selected-account-hint" class="picker-selected">未指定：将使用第一个可用邮箱</div>
+          <div id="account-search-status" class="picker-status">正在准备可用邮箱列表...</div>
+          <div id="account-search-results" class="picker-results"></div>
+        </div>
+      </details>
+
+      <details class="card advanced-panel">
+        <summary>
+          <span>高级 / 手动调试</span>
+        </summary>
+
+        <div class="steps-header">
+          <span class="section-caption">手动步骤</span>
+          <span id="steps-progress" class="steps-progress">0 / 10</span>
+        </div>
+
+        <div class="steps-list">
+          <div class="step-row" data-step="1">
+            <div class="step-indicator"><span class="step-num">1</span></div>
+            <div class="step-main">
+              <div class="step-title">获取 OAuth 链接</div>
+              <div class="step-desc">从 CPA 面板抓取 OAuth 链接并写回扩展。</div>
+            </div>
+            <div class="step-actions">
+              <button id="step-1" class="step-btn" type="button">执行</button>
+              <span class="step-status" data-step="1"></span>
+            </div>
+          </div>
+
+          <div class="step-row" data-step="2">
+            <div class="step-indicator"><span class="step-num">2</span></div>
+            <div class="step-main">
+              <div class="step-title">进入注册流程</div>
+              <div class="step-desc">在 OAuth / Auth 页面切换到注册页。</div>
+            </div>
+            <div class="step-actions">
+              <button id="step-2" class="step-btn" type="button">执行</button>
+              <span class="step-status" data-step="2"></span>
+            </div>
+          </div>
+
+          <div class="step-row" data-step="3">
+            <div class="step-indicator"><span class="step-num">3</span></div>
+            <div class="step-main">
+              <div class="step-title">填写邮箱和密码</div>
+              <div class="step-desc">自动提交当前账号的邮箱与密码。</div>
+            </div>
+            <div class="step-actions">
+              <button id="step-3" class="step-btn" type="button">执行</button>
+              <span class="step-status" data-step="3"></span>
+            </div>
+          </div>
+
+          <div class="step-row" data-step="4">
+            <div class="step-indicator"><span class="step-num">4</span></div>
+            <div class="step-main">
+              <div class="step-title">注册验证码</div>
+              <div class="step-desc">先轮询注册码，再回填到当前页面。</div>
+            </div>
+            <div class="step-actions step-actions-split">
+              <button id="poll-signup-code" class="step-btn step-btn-mini" type="button">取码</button>
+              <button id="fill-signup-code" class="step-btn step-btn-mini" type="button">回填</button>
+              <span class="step-status" data-step="4"></span>
+            </div>
+          </div>
+
+          <div class="step-row" data-step="5">
+            <div class="step-indicator"><span class="step-num">5</span></div>
+            <div class="step-main">
+              <div class="step-title">填写基础资料</div>
+              <div class="step-desc">自动填写姓名等基础信息。</div>
+            </div>
+            <div class="step-actions">
+              <button id="step-5" class="step-btn" type="button">执行</button>
+              <span class="step-status" data-step="5"></span>
+            </div>
+          </div>
+
+          <div class="step-row" data-step="6">
+            <div class="step-indicator"><span class="step-num">6</span></div>
+            <div class="step-main">
+              <div class="step-title">刷新 OAuth 并登录</div>
+              <div class="step-desc">重新打开 OAuth 页面并走登录链路。</div>
+            </div>
+            <div class="step-actions">
+              <button id="step-6" class="step-btn" type="button">执行</button>
+              <span class="step-status" data-step="6"></span>
+            </div>
+          </div>
+
+          <div class="step-row" data-step="7">
+            <div class="step-indicator"><span class="step-num">7</span></div>
+            <div class="step-main">
+              <div class="step-title">登录验证码</div>
+              <div class="step-desc">先轮询登录验证码，再回填到当前页面。</div>
+            </div>
+            <div class="step-actions step-actions-split">
+              <button id="poll-login-code" class="step-btn step-btn-mini" type="button">取码</button>
+              <button id="fill-login-code" class="step-btn step-btn-mini" type="button">回填</button>
+              <span class="step-status" data-step="7"></span>
+            </div>
+          </div>
+
+          <div class="step-row" data-step="8">
+            <div class="step-indicator"><span class="step-num">8</span></div>
+            <div class="step-main">
+              <div class="step-title">确认 OAuth 授权</div>
+              <div class="step-desc">自动点击继续，并监听 localhost 回调。</div>
+            </div>
+            <div class="step-actions">
+              <button id="step-8" class="step-btn" type="button">执行</button>
+              <span class="step-status" data-step="8"></span>
+            </div>
+          </div>
+
+          <div class="step-row" data-step="85">
+            <div class="step-indicator"><span class="step-num">8.5</span></div>
+            <div class="step-main">
+              <div class="step-title">短信验证</div>
+              <div class="step-desc">进入手机号页面后自动申请号码、接收短信并完成验证。</div>
+            </div>
+            <div class="step-actions">
+              <button id="step-85" class="step-btn" type="button">执行</button>
+              <span class="step-status" data-step="85"></span>
+            </div>
+          </div>
+
+          <div class="step-row" data-step="9">
+            <div class="step-indicator"><span class="step-num">9</span></div>
+            <div class="step-main">
+              <div class="step-title">CPA 回填校验</div>
+              <div class="step-desc">把 localhost 回调地址回填到 CPA 面板。</div>
+            </div>
+            <div class="step-actions">
+              <button id="step-9" class="step-btn" type="button">执行</button>
+              <span class="step-status" data-step="9"></span>
+            </div>
+          </div>
+        </div>
+
+        <div class="steps-footer">
+          <button id="complete-flow" class="btn btn-secondary btn-sm" type="button">完成流程</button>
+          <span class="section-caption">标记已用并在outlook打“已注册”标签</span>
+        </div>
+      </details>
+
+      <section class="card">
+        <div class="section-heading section-heading-log">
+          <h2>运行日志</h2>
+          <div class="log-toolbar">
+            <span class="section-caption">带颜色的步骤与异常提示</span>
+            <button id="copy-logs" class="btn btn-ghost btn-xs" type="button">复制</button>
+            <button id="clear-logs" class="btn btn-ghost btn-xs" type="button">清空</button>
+          </div>
+        </div>
+        <div id="log-area" class="log-area"></div>
+      </section>
+    </main>
+
+    <div id="toast-container" class="toast-container"></div>
+    <script type="module" src="./sidepanel.js"></script>
+  </body>
+</html>
