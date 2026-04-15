@@ -378,7 +378,7 @@ test('runSingleAutoFlow executes step 8.5 after step 8 when phone verification i
       async executeSignupStep(step) {
         calls.push(`executeSignupStep:${step}`);
         if (step === 8) {
-          return { needsPhoneVerification: true };
+          return { needsPhoneVerification: !calls.includes('executeSignupStep:85') };
         }
       },
       async executeFinalVerifyStep() {
@@ -420,10 +420,56 @@ test('runSingleAutoFlow executes step 8.5 after step 8 when phone verification i
     'fillLastCode:login',
     'executeSignupStep:8',
     'executeSignupStep:85',
+    'executeSignupStep:8',
     'executeFinalVerifyStep',
     'completeCurrentAccount',
     'log:单轮自动流程完成，当前邮箱已标记为已使用',
   ]);
+});
+
+test('runSingleAutoFlow reaches final verify only after step 8 consent handling succeeds', async () => {
+  const calls = [];
+
+  await runSingleAutoFlow({
+    actions: {
+      async prepareNextAccount() {
+        calls.push('prepareNextAccount');
+        return { address: 'user@hotmail.com' };
+      },
+      async refreshOauthFromVps() {
+        calls.push('refreshOauthFromVps');
+      },
+      async findCurrentEmailRecord() {
+        calls.push('findCurrentEmailRecord');
+        return { id: 1, address: 'user@hotmail.com' };
+      },
+      async openOauthUrl() {
+        calls.push('openOauthUrl');
+      },
+      async executeSignupStep(step) {
+        calls.push(`executeSignupStep:${step}`);
+      },
+      async executeFinalVerifyStep() {
+        calls.push('executeFinalVerifyStep');
+      },
+      async pollVerificationCode(phase) {
+        calls.push(`pollVerificationCode:${phase}`);
+        return { code: '123456' };
+      },
+      async fillLastCode(phase) {
+        calls.push(`fillLastCode:${phase}`);
+      },
+      async completeCurrentAccount() {
+        calls.push('completeCurrentAccount');
+        return { status: 'completed' };
+      },
+      async addLog(message) {
+        calls.push(`log:${message}`);
+      },
+    },
+  });
+
+  assert.ok(calls.indexOf('executeSignupStep:8') < calls.indexOf('executeFinalVerifyStep'));
 });
 
 test('runSingleAutoFlow does not mark account completed when a step fails', async () => {

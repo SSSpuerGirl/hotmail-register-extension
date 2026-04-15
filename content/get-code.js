@@ -14,6 +14,7 @@ async function requestHeroPhoneNumber() {
 async function pollHeroSmsCode(activationId, {
   intervalMs,
   timeoutMs,
+  mode,
 } = {}) {
   const response = await chrome.runtime.sendMessage({
     type: 'HERO_SMS_POLL_CODE',
@@ -21,6 +22,7 @@ async function pollHeroSmsCode(activationId, {
       activationId,
       intervalMs,
       timeoutMs,
+      mode,
     },
   });
 

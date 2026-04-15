@@ -51,6 +51,23 @@ test('shouldUseStep8ContinueButton requires consent context and no blocking page
   }), false);
 });
 
+test('isOAuthConsentUrl matches the codex consent route', () => {
+  assert.equal(
+    oauthStepHelpersModule.isOAuthConsentUrl?.('https://auth.openai.com/sign-in-with-chatgpt/codex/consent'),
+    true
+  );
+});
+
+test('shouldUseStep8ContinueButton accepts codex consent pages with consent text', () => {
+  assert.equal(shouldUseStep8ContinueButton({
+    hasActionButton: true,
+    isConsentUrl: false,
+    isConsentText: true,
+    isVerificationPage: false,
+    isAddPhonePage: false,
+  }), true);
+});
+
 test('getInteractionPacingProfile provides slower human-like pauses for key transitions', () => {
   const profile = oauthStepHelpersModule.getInteractionPacingProfile?.();
 

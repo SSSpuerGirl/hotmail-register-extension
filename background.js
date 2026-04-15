@@ -1582,6 +1582,7 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
     pollHeroSmsCode(message.payload?.activationId, {
       intervalMs: message.payload?.intervalMs,
       timeoutMs: message.payload?.timeoutMs,
+      mode: message.payload?.mode,
     })
       .then((data) => sendResponse({ ok: true, data }))
       .catch((error) => sendResponse({ ok: false, error: error.message || String(error) }));

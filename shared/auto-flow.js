@@ -23,7 +23,8 @@ async function runStep85IfNeeded(executeSignupStep, step8Result) {
   if (!step8Result?.needsPhoneVerification) {
     return step8Result;
   }
-  return executeSignupStep(85);
+  await executeSignupStep(85);
+  return executeSignupStep(8);
 }
 
 export async function runSingleAutoFlow({ actions = {} } = {}) {
@@ -268,9 +269,11 @@ export async function continueSingleAutoFlow({ state = {}, actions = {} } = {}) 
   } else if (startStep === 85) {
     await checkAutoControl();
     await executeSignupStep(85);
+    await checkAutoControl();
+    await executeSignupStep(8);
   }
 
-  if (startStep <= 9) {
+  if (startStep <= 9 || startStep === 85) {
     await checkAutoControl();
     await executeFinalVerifyStep();
   }

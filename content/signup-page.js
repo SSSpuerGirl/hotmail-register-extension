@@ -534,6 +534,15 @@ function isStep8Ready() {
   });
 }
 
+function isProfileSetupUrl(url) {
+  try {
+    const parsed = new URL(url);
+    return /\/(?:u\/signup\/)?profile(?:[/?#]|$)/i.test(parsed.pathname || '');
+  } catch {
+    return /profile/i.test(String(url || ''));
+  }
+}
+
 async function step2OpenSignup() {
   const emailInput = helpers.getEmailInput();
   const passwordInput = helpers.getPasswordInput();
@@ -1097,10 +1106,25 @@ async function step85PhoneVerification() {
     throw new Error(`步骤 8.5：未找到手机号输入框。URL: ${location.href}`);
   }
 
-  utils.log('步骤 8.5：正在申请或复用手机号...');
-  const { activationId, phoneNumber, reused } = await heroSms.requestHeroPhoneNumber();
+  utils.log('步骤 8.5：正在检查可复用手机号...');
+  const {
+    activationId,
+    phoneNumber,
+    reused,
+    activationStatus,
+    decisionReason,
+  } = await heroSms.requestHeroPhoneNumber();
+
   utils.setInputValue(phoneInput, phoneNumber);
-  utils.log(`步骤 8.5：手机号已填写：${phoneNumber}${reused ? '（复用）' : ''}`);
+  if (!reused && decisionReason) {
+    utils.log(`步骤 8.5：当前改为申请新号，原因：${decisionReason}`, 'warn');
+  }
+  utils.log(`步骤 8.5：手机号已填写：${phoneNumber}${reused ? '（复用）' : '（新号）'}`);
+  utils.log(
+    reused
+      ? `步骤 8.5：已选择最新复用号，状态 ${activationStatus || '未知'}`
+      : '步骤 8.5：已申请新手机号，可能原因：无可复用号或最新活跃号 createdAt=expiredAt，准备进入常规验证码轮询...'
+  );
   await pauseForInteraction('afterTyping');
 
   const submitButton = getPhoneSubmitButton();
@@ -1112,9 +1136,21 @@ async function step85PhoneVerification() {
   utils.clickElement(submitButton);
   utils.log('步骤 8.5：已提交手机号，正在等待短信验证码...');
 
-  const { code, dateTime } = await heroSms.pollHeroSmsCode(activationId);
+  const pollMode = reused && activationStatus === '2' ? 'active_list_new_sms' : 'status';
+  utils.log(
+    pollMode === 'active_list_new_sms'
+      ? '步骤 8.5：当前使用旧号重发轮询模式，等待活跃激活列表返回新的 smsCode...'
+      : '步骤 8.5：当前使用常规短信轮询模式，等待平台返回验证码...'
+  );
+  const { code, dateTime } = await heroSms.pollHeroSmsCode(activationId, {
+    mode: pollMode,
+    intervalMs: 10000,
+    timeoutMs: 120000,
+  });
+
   const codeInput = await utils.waitForElement('input[autocomplete="one-time-code"], input[name*="code" i], input[id*="code" i], input[inputmode="numeric"], input[maxlength="6"]', 30000);
   utils.setInputValue(codeInput, code);
+  utils.log(`步骤 8.5：收到短信验证码 ${code}${dateTime ? `，时间 ${dateTime}` : ''}`);
   utils.log(`步骤 8.5：短信验证码已填写：${code}`);
 
   const verifyButton = getPhoneSubmitButton();
@@ -1135,6 +1171,26 @@ async function step85PhoneVerification() {
         dateTime,
       };
     }
+
+    if (isProfileSetupPageReady() || isProfileSetupUrl(location.href)) {
+      utils.log('步骤 8.5：短信验证后进入资料页，复用步骤 5 补全基础资料。', 'warn');
+      const profileResult = await step5FillProfile();
+      if (!profileResult?.ok) {
+        throw new Error('步骤 8.5：复用步骤 5 补全资料失败。');
+      }
+      if (isStep8Ready()) {
+        return {
+          ok: true,
+          activationId,
+          phoneNumber,
+          reused,
+          code,
+          dateTime,
+          profileCompleted: true,
+        };
+      }
+    }
+
     await utils.sleep(250);
   }
 

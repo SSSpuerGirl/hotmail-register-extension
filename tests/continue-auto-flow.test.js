@@ -104,6 +104,7 @@ test('continueSingleAutoFlow runs step 8.5 when step 8 reports phone verificatio
     'log:继续自动流程：从步骤 8 开始',
     'executeSignupStep:8',
     'executeSignupStep:85',
+    'executeSignupStep:8',
     'executeFinalVerifyStep',
     'completeCurrentAccount',
     'log:自动流程继续完成，当前邮箱已标记为已使用',
